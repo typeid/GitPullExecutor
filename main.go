@@ -56,10 +56,10 @@ func main() {
 	logFatalIfError(err)
 
 	repository, err := git.PlainOpen(parsed.repositoryPath)
-	logFatalIfError(fmt.Errorf("failed to open repository: '%s'", err))
+	logFatalIfError(err)
 
 	worktree, err := repository.Worktree()
-	logFatalIfError(fmt.Errorf("failed to get work tree: '%s'", err))
+	logFatalIfError(err)
 
 	cmd := exec.Command(parsed.executionCommand)
 
@@ -69,6 +69,7 @@ func main() {
 
 		// No changes
 		if err == git.NoErrAlreadyUpToDate {
+			fmt.Printf("Repository already up to date... Pulling again in %d seconds\n", parsed.pullInterval)
 			goto TIMEOUT
 		}
 
@@ -80,14 +81,16 @@ func main() {
 			}
 
 			fmt.Printf("Unable to pull repository: %s. Retrying...\n", err)
+			goto TIMEOUT
 		}
 
 		// Successful pull, execute command
+		fmt.Println("Pulled new changes, executing command" + parsed.executionCommand)
 		err = cmd.Run()
-		logFatalIfError(fmt.Errorf("failed to run command: '%s'", err))
+		logFatalIfError(err)
 
 	TIMEOUT:
-		time.Sleep(time.Duration(parsed.pullInterval))
+		time.Sleep(time.Second * time.Duration(parsed.pullInterval))
 	}
 
 }
